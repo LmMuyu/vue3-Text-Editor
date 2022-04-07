@@ -5,8 +5,9 @@ import dts from "vite-plugin-dts";
 import AutoImport from "unplugin-auto-import/vite";
 import Components from "unplugin-vue-components/vite";
 import { ElementPlusResolver } from "unplugin-vue-components/resolvers";
+import { viteStaticCopy } from "vite-plugin-static-copy";
 
-const formats: LibraryFormats[] = ["es", "cjs"];
+const formats: LibraryFormats[] = ["es"];
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -22,6 +23,18 @@ export default defineConfig({
     }),
     Components({
       resolvers: [ElementPlusResolver()],
+    }),
+    viteStaticCopy({
+      targets: [
+        {
+          src: path.join(process.cwd(), "/package.json"),
+          dest: path.join(process.cwd(), "/dist"),
+        },
+        {
+          src: path.join(process.cwd(), "/README.md"),
+          dest: path.join(process.cwd(), "/dist"),
+        },
+      ],
     }),
   ],
   mode: "production",
@@ -54,8 +67,14 @@ export default defineConfig({
       external: ["vue"],
       output: {
         chunkFileNames: "js/[name]-[hash]-[format].js",
-        assetFileNames: "[ext]/[name]-[hash].[ext]",
-        entryFileNames: "[name]-[format].js",
+        assetFileNames(chunkInfo) {
+          if (chunkInfo.name.endsWith(".css")) {
+            return "[ext]/index.css"
+          } else {
+            return "[ext]/[name]-[hash].[ext]";
+          }
+        },
+        entryFileNames: "[name].js",
         // {
         //   quill: ["quill"],
         // }

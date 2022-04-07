@@ -1,38 +1,57 @@
 <template>
-  <div ref="editor">:::</div>
+  <div ref="editor" class="editor_bg"></div>
 
-  <button @click="appendImage">插入图片</button>
-  <button @click="openEmoji">选择图片</button>
-  <button @click="dialogVisible = true">@</button>
+  <div class="flex align-item py-4">
+    <el-button class="mx-2" @click="onDialogVisible" circle>
+      <font-icon icon="iconaite"></font-icon>
+    </el-button>
+    <button class="mx-2" @click="openEmoji">选择表情</button>
+    <el-upload
+      class="upload-demo mx-2"
+      :show-file-list="false"
+      :on-change="selectImage"
+      action="//"
+      :auto-upload="false"
+    >
+      <template #trigger>
+        <el-button circle>
+          <font-icon icon="icontupian"> </font-icon>
+        </el-button>
+      </template>
+    </el-upload>
+  </div>
 
   <el-dialog v-model="dialogVisible" title="Tips" width="30%" :before-close="handleClose">
-    <el-table :data="userLists" style="width: 100%" height="200">
-      <el-table-column prop="name" />
-    </el-table>
+    <slot name="dialog"></slot>
   </el-dialog>
 </template>
 <script setup lang="ts">
 import Quill from "quill";
 import { nextTick, onMounted, ref } from "vue";
-import { ElDialog, ElTable, ElTableColumn } from "element-plus";
+import { ElDialog, ElButton, ElUpload } from "element-plus";
+import FontIcon from "../fonticon/FontIcon.vue";
 
 import "element-plus/es/components/dialog/style/css";
-import "element-plus/es/components/table/style/css";
-import "element-plus/es/components/table-column/style/css";
+import "element-plus/es/components/button/style/css";
+import "element-plus/es/components/upload/style/css";
 
-const props = defineProps({
-  userLists: {
-    type: Array,
-    required: true,
-  },
-});
+import "../../assets/bubble.css";
 
 const editor = ref(null);
 const dialogVisible = ref(false);
 let quill: Quill | null = null;
-const src = "https://t12.baidu.com/it/u=2944858655,3260611328&fm=58";
 
-console.log(props.userLists);
+function onDialogVisible() {
+  dialogVisible.value = true;
+
+  nextTick(() => {
+    console.log(document.querySelector(".el-table_1_column_1"));
+    //@ts-ignore
+    document.querySelector(".el-table_1_column_1")!.style.textCss = `
+      display:none
+      `;
+  });
+}
 
 function handleClose(done: () => void) {
   done();
@@ -57,14 +76,18 @@ function getSelection() {
   return [index, len];
 }
 
-function appendImage() {
+function appendImage(uploadImaag: string) {
   const range = getSelection();
 
   if (range) {
     const index = range[0];
     const len = range[1];
 
-    isLenSwitch(index, len, src);
+    isLenSwitch(index, len, uploadImaag);
+  } else {
+    const start = quill?.getLength()!;
+
+    insertImage(start, uploadImaag);
   }
 }
 
@@ -100,7 +123,7 @@ async function openEmoji() {
 function selectEmoji(): Promise<string> {
   return new Promise((resolve, reject) => {
     setTimeout(() => {
-      resolve(src);
+      resolve("src");
     }, 3000);
   });
 }
@@ -114,7 +137,7 @@ async function loadEmoji() {
       keepalive: true,
     });
 
-    const worker = new Worker("../../worker/fetchEmoji.js");
+    const worker = new Worker("/src/worker/fetchEmoji.js");
     const collection: any[] = [];
 
     worker.onmessage = function (e) {
@@ -136,24 +159,52 @@ async function loadEmoji() {
 
 loadEmoji();
 
+function selectImage(evt: any) {
+  const file = evt.raw as File;
+
+  const newfile = URL.createObjectURL(file.slice(0));
+  appendImage(newfile);
+}
+
 onMounted(() => {
   if (editor.value) {
     quill = new Quill(editor.value, {
-      theme: "snow",
+      theme: "bubble",
     });
   }
-
-  nextTick(() => {
-    console.log( document.querySelector(".el-table_1_column_1"));
-    
-    //@ts-ignore
-    document.querySelector(".el-table_1_column_1")!.style.textCss = `
-    display:none
-    `;
-  });
 });
 </script>
 <style scoped>
+.editor_bg {
+  border: 1px solid #ecf0f1;
+}
+.px-4 {
+  padding: 0 16px;
+}
+
+.py-4 {
+  padding: 16px 0;
+}
+
+.p-4 {
+  padding: 16px;
+}
+
+.mx-2 {
+  margin: 0 4px;
+}
+
+.flex {
+  display: flex;
+}
+
+.justify-center {
+  justify-content: center;
+}
+
+.align-item {
+  align-items: center;
+}
 .infinite-list {
   height: 300px;
   padding: 0;

@@ -4,6 +4,7 @@
 
 declare module 'vue' {
   export interface GlobalComponents {
+    FontIcon: typeof import('./src/components/fonticon/FontIcon.vue')['default']
     TextEditor: typeof import('./src/components/textEditor/TextEditor.vue')['default']
   }
 }

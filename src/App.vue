@@ -1,5 +1,13 @@
 <template>
-  <TexteEditor :user-lists="lists" />
+  <TexteEditor>
+    <template #dialog>
+      <ul>
+        <li v-for="(item, index) in 15" :key="index">
+          {{ item }}
+        </li>
+      </ul>
+    </template>
+  </TexteEditor>
 </template>
 <script setup lang="ts">
 import { ref } from "vue";
