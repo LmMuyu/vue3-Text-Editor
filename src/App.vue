@@ -1,11 +1,7 @@
 <template>
-  <TexteEditor>
-    <template #dialog>
-      <ul>
-        <li v-for="(item, index) in 15" :key="index">
-          {{ item }}
-        </li>
-      </ul>
+  <TexteEditor :AiteUserData="lists">
+    <template #dialog="{ data }">
+      {{ data.uid }}
     </template>
   </TexteEditor>
 </template>
@@ -15,7 +11,7 @@ import TexteEditor from "./components/textEditor/TextEditor.vue";
 
 const lists = ref(
   [1, 2, 5, 46, 89, 8, 9, 4].map((v) => ({
-    name: v,
+    uid: v,
   }))
 );
 </script>

@@ -927,6 +927,7 @@
   padding: 5px 15px;
   text-decoration: none;
   z-index: 1;
+  display: none;
 }
 .ql-container.ql-bubble:not(.ql-disabled) a::after {
   border-top: 6px solid #444;
@@ -945,6 +946,7 @@
   transform: translate(-50%, -100%);
   transition: visibility 0s ease 200ms;
   visibility: hidden;
+  display: none;
 }
 .ql-container.ql-bubble:not(.ql-disabled) a:hover::before,
 .ql-container.ql-bubble:not(.ql-disabled) a:hover::after {

@@ -1,33 +1,47 @@
 <template>
-  <div ref="editor" class="editor_bg"></div>
+  <div ref="editor" @click="watchClickATab" class="editor_bg"></div>
+  <div class="flex align-item justify-between">
+    <div class="flex align-item py-4">
+      <el-button class="mx-2" @click="onDialogVisible" circle>
+        <font-icon icon="iconaite"></font-icon>
+      </el-button>
+      <button class="mx-2" @click="openEmoji">选择表情</button>
+      <el-upload
+        class="upload-demo mx-2"
+        :show-file-list="false"
+        :on-change="selectImage"
+        action="//"
+        :auto-upload="false"
+      >
+        <template #trigger>
+          <el-button circle>
+            <font-icon icon="icontupian"> </font-icon>
+          </el-button>
+        </template>
+      </el-upload>
+    </div>
 
-  <div class="flex align-item py-4">
-    <el-button class="mx-2" @click="onDialogVisible" circle>
-      <font-icon icon="iconaite"></font-icon>
-    </el-button>
-    <button class="mx-2" @click="openEmoji">选择表情</button>
-    <el-upload
-      class="upload-demo mx-2"
-      :show-file-list="false"
-      :on-change="selectImage"
-      action="//"
-      :auto-upload="false"
-    >
-      <template #trigger>
-        <el-button circle>
-          <font-icon icon="icontupian"> </font-icon>
-        </el-button>
-      </template>
-    </el-upload>
+    <div>
+      <el-button @click="release" plain>Plain</el-button>
+    </div>
   </div>
 
-  <el-dialog v-model="dialogVisible" title="Tips" width="30%" :before-close="handleClose">
-    <slot name="dialog"></slot>
+  <el-dialog
+    ref="dialogbox"
+    v-model="dialogVisible"
+    title="Tips"
+    width="30%"
+    :before-close="handleClose"
+  >
+    <div v-for="(userinfo, index) in AiteUserData" :key="index" @click="selectAite(userinfo)">
+      <slot name="dialog" :data="userinfo"></slot>
+    </div>
   </el-dialog>
 </template>
 <script setup lang="ts">
 import Quill from "quill";
-import { nextTick, onMounted, ref } from "vue";
+import { nextTick, onMounted, PropType, ref } from "vue";
+
 import { ElDialog, ElButton, ElUpload } from "element-plus";
 import FontIcon from "../fonticon/FontIcon.vue";
 
@@ -37,43 +51,63 @@ import "element-plus/es/components/upload/style/css";
 
 import "../../assets/bubble.css";
 
+type AiteUser = { uid: number } & Readonly<Record<any, any>>;
+
+const ctxEmit = defineEmits(["editor_content", "sendAiteUid"]);
+
+const props = defineProps({
+  AiteUserData: {
+    type: Array as unknown as PropType<AiteUser>,
+    required: true,
+  },
+});
+
 const editor = ref(null);
 const dialogVisible = ref(false);
+const dialogbox = ref<typeof ElDialog | null>(null);
+const p_status: Array<(value: any) => void> = [];
 let quill: Quill | null = null;
+
+function watchClickATab(el: Event) {
+  // console.log(el.target);
+}
+
+function release() {
+  const content = editorContent();
+
+  if (content) {
+    ctxEmit("editor_content", content);
+  }
+}
+
+function selectAite(userinfo: AiteUser) {
+  dialogVisible.value = false;
+
+  const _resolve = p_status[0];
+  _resolve(userinfo);
+}
 
 function onDialogVisible() {
   dialogVisible.value = true;
 
-  nextTick(() => {
-    console.log(document.querySelector(".el-table_1_column_1"));
-    //@ts-ignore
-    document.querySelector(".el-table_1_column_1")!.style.textCss = `
-      display:none
-      `;
+  insertLinke();
+}
+
+async function insertLinke() {
+  const p = new Promise((resolve, reject) => {
+    p_status.push(resolve, reject);
   });
+
+  const uid = await Promise.race([p]);
+
+  if (uid) {
+    ctxEmit("sendAiteUid", uid);
+  }
 }
 
 function handleClose(done: () => void) {
+  p_status[1](undefined);
   done();
-}
-
-function deleteText(start: number, len: number) {
-  return quill?.deleteText(start, len);
-}
-
-function insertImage(start: number, src: string) {
-  return quill?.insertEmbed(start, "image", src);
-}
-
-function getSelection() {
-  const range = quill?.getSelection();
-
-  if (!range) return null;
-
-  const index = range.index;
-  const len = range.length;
-
-  return [index, len];
 }
 
 function appendImage(uploadImaag: string) {
@@ -82,11 +116,9 @@ function appendImage(uploadImaag: string) {
   if (range) {
     const index = range[0];
     const len = range[1];
-
     isLenSwitch(index, len, uploadImaag);
   } else {
     const start = quill?.getLength()!;
-
     insertImage(start, uploadImaag);
   }
 }
@@ -166,13 +198,65 @@ function selectImage(evt: any) {
   appendImage(newfile);
 }
 
+function auillOn() {
+  quill?.on("text-change", (delta, olddelta, source) => {
+    if (source === "user") {
+      console.log(delta);
+      console.log(olddelta);
+    }
+  });
+}
+
 onMounted(() => {
   if (editor.value) {
     quill = new Quill(editor.value, {
       theme: "bubble",
+      placeholder: "发布评论......",
     });
+
+    auillOn();
+
+    tooltipHidden();
+    quill.insertText(0, "@Hello", "link", "https://javascript:void(123)");
+
+    const content = editorContent();
+    // console.log(content);
   }
 });
+
+//工具函数
+function editorContent() {
+  const content = quill?.getContents();
+
+  if (content) {
+    return content;
+  }
+}
+
+function getSelection() {
+  const range = quill?.getSelection();
+
+  if (!range) return null;
+
+  const index = range.index;
+  const len = range.length;
+
+  return [index, len];
+}
+
+function deleteText(start: number, len: number) {
+  return quill?.deleteText(start, len);
+}
+
+function insertImage(start: number, src: string) {
+  return quill?.insertEmbed(start, "image", src);
+}
+
+async function tooltipHidden() {
+  //@ts-ignore
+  const tooltip = document.querySelector(".ql-tooltip")!;
+  tooltip?.parentNode?.removeChild(tooltip);
+}
 </script>
 <style scoped>
 .editor_bg {
@@ -200,6 +284,10 @@ onMounted(() => {
 
 .justify-center {
   justify-content: center;
+}
+
+.justify-between {
+  justify-content: space-between;
 }
 
 .align-item {
