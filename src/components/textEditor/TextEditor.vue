@@ -1,5 +1,8 @@
 <template>
-  <div ref="editor" @click="watchClickATab" class="editor_bg"></div>
+  <div ref="editor" class="editor_bg container">
+    就看到咯dawdawdawd d awdawdawdalwpdpawdlajdawiodjajwdpoJDPWDjaOw[jdWd
+    wdawpdjOwdjaowdjWDjOWDJIWD我开大伟大伟大
+  </div>
   <div class="flex align-item justify-between">
     <div class="flex align-item py-4">
       <el-button class="mx-2" @click="onDialogVisible" circle>
@@ -29,18 +32,24 @@
   <el-dialog
     ref="dialogbox"
     v-model="dialogVisible"
-    title="Tips"
+    title="关注"
     width="30%"
     :before-close="handleClose"
   >
-    <div v-for="(userinfo, index) in AiteUserData" :key="index" @click="selectAite(userinfo)">
-      <slot name="dialog" :data="userinfo"></slot>
+    <div ref="wrapper" class="hidden" style="height: 250px">
+      <div class="continer">
+        <div v-for="(userinfo, index) in AiteUserData" :key="index" @click="selectAite(userinfo)">
+          <slot name="dialog" :data="userinfo"></slot>
+        </div>
+      </div>
     </div>
   </el-dialog>
 </template>
 <script setup lang="ts">
 import Quill from "quill";
 import { nextTick, onMounted, PropType, ref } from "vue";
+
+import { BScroll } from "./methods";
 
 import { ElDialog, ElButton, ElUpload } from "element-plus";
 import FontIcon from "../fonticon/FontIcon.vue";
@@ -51,9 +60,9 @@ import "element-plus/es/components/upload/style/css";
 
 import "../../assets/bubble.css";
 
-type AiteUser = { uid: number } & Readonly<Record<any, any>>;
+type AiteUser = { uid: number; name: string } & Readonly<Record<any, any>>;
 
-const ctxEmit = defineEmits(["editor_content", "sendAiteUid"]);
+const ctxEmit = defineEmits(["editor_content", "sendAiteUid", "aiteuser_exist"]);
 
 const props = defineProps({
   AiteUserData: {
@@ -67,10 +76,8 @@ const dialogVisible = ref(false);
 const dialogbox = ref<typeof ElDialog | null>(null);
 const p_status: Array<(value: any) => void> = [];
 let quill: Quill | null = null;
-
-function watchClickATab(el: Event) {
-  // console.log(el.target);
-}
+const aiteUserSet = new Set<string>();
+const wrapper = ref(null);
 
 function release() {
   const content = editorContent();
@@ -87,21 +94,56 @@ function selectAite(userinfo: AiteUser) {
   _resolve(userinfo);
 }
 
-function onDialogVisible() {
+async function onDialogVisible() {
   dialogVisible.value = true;
-
   insertLinke();
+
+  await nextTick();
+  modifyPadding();
+  registered();
+}
+
+function registered() {
+  if (wrapper.value) {
+    console.log(wrapper.value);
+
+    const BS = BScroll(wrapper.value);
+  } else {
+    console.error("无法获取dom");
+  }
+}
+
+function modifyPadding() {
+  (document.querySelector(".el-dialog__body")! as HTMLElement).style.cssText = `
+    padding:16px
+  `;
 }
 
 async function insertLinke() {
-  const p = new Promise((resolve, reject) => {
-    p_status.push(resolve, reject);
-  });
+  const pos = getSelection();
+  let insertPos = null;
 
-  const uid = await Promise.race([p]);
+  if (!pos) {
+    insertPos = getLength();
+  } else {
+    insertPos = pos[0];
+  }
 
-  if (uid) {
-    ctxEmit("sendAiteUid", uid);
+  console.log(insertPos);
+
+  const p = new Promise((resolve, reject) => p_status.push(resolve, reject));
+
+  try {
+    const uid = await Promise.race([p]);
+
+    if (uid) {
+      aiTeUser(uid as number, insertPos!, "阿凯打开");
+      ctxEmit("sendAiteUid", uid);
+    }
+  } catch (error) {
+    console.log(error);
+  } finally {
+    p_status.length = 0;
   }
 }
 
@@ -198,11 +240,44 @@ function selectImage(evt: any) {
   appendImage(newfile);
 }
 
-function auillOn() {
+function quillOn() {
   quill?.on("text-change", (delta, olddelta, source) => {
+    console.log(delta);
+
     if (source === "user") {
-      console.log(delta);
-      console.log(olddelta);
+      const content = editorContent()!;
+      const ops = content.ops;
+      const focuspos = getSelection()!;
+      let currentIndex = 0;
+      let aitesetLen = aiteUserSet.size;
+
+      for (let i = 0; i < ops.length && aitesetLen > 0; i++) {
+        const op = ops[i];
+
+        if (op?.attributes?.link) {
+          const aiteop = op.insert as string;
+          const len = aiteop.length;
+
+          if (aiteUserSet.has(aiteop)) {
+            currentIndex += len;
+          } else {
+            deleteText(currentIndex, len);
+            quill?.insertText(currentIndex, aiteop);
+            currentIndex += len;
+            aitesetLen -= 1;
+
+            setTimeout(() => {
+              quill?.setSelection(focuspos[0], 0);
+            }, 0);
+
+            const oldop = olddelta.ops[i];
+            const oldaiteuser = oldop.insert;
+            aiteUserSet.delete(oldaiteuser as string);
+          }
+        } else {
+          currentIndex += op.insert!.toString().length;
+        }
+      }
     }
   });
 }
@@ -214,17 +289,26 @@ onMounted(() => {
       placeholder: "发布评论......",
     });
 
-    auillOn();
-
+    quillOn();
     tooltipHidden();
-    quill.insertText(0, "@Hello", "link", "https://javascript:void(123)");
-
-    const content = editorContent();
-    // console.log(content);
   }
 });
 
-//工具函数
+/***
+ * 工具函数
+ *
+ */
+
+function aiTeUser(uid: number, insertPos: number, name: string) {
+  const aitename = "@" + name;
+  if (aiteUserSet.has(aitename)) {
+    return ctxEmit("aiteuser_exist", true);
+  }
+
+  aiteUserSet.add(aitename);
+  quill?.insertText(insertPos, aitename, "link", `https://javascript(${uid})`);
+}
+
 function editorContent() {
   const content = quill?.getContents();
 
@@ -257,8 +341,16 @@ async function tooltipHidden() {
   const tooltip = document.querySelector(".ql-tooltip")!;
   tooltip?.parentNode?.removeChild(tooltip);
 }
+
+function getLength() {
+  return quill?.getLength();
+}
 </script>
+
 <style scoped>
+.hidden {
+  overflow: hidden;
+}
 .editor_bg {
   border: 1px solid #ecf0f1;
 }

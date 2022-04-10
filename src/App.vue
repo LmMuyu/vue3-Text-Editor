@@ -10,8 +10,9 @@ import { ref } from "vue";
 import TexteEditor from "./components/textEditor/TextEditor.vue";
 
 const lists = ref(
-  [1, 2, 5, 46, 89, 8, 9, 4].map((v) => ({
+  new Array(50).fill(1).map((v) => ({
     uid: v,
+    name: "kkkk_" + v,
   }))
 );
 </script>
