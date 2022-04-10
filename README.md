@@ -1,14 +1,17 @@
-### vue3-text-editor
+## vue3-text-editor
+
+#### 安装
+
+yarn add vue3-text-editor
 
 #### slot
-  #dialog
 
+#dialog
 
 #### props
-  upLoadPath:string
 
+upLoadPath:string
 
-#### event事件
-  editor_content 返回内容
-  sendAiteUid  返回艾特人uid
-  aiteuser_exist 返回是否已经艾特
+#### event 事件
+
+editor_content 返回内容 sendAiteUid 返回艾特人 uid aiteuser_exist 返回是否已经艾特

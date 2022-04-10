@@ -16,6 +16,6 @@
     "src/**/*.d.ts",
     "src/**/*.tsx",
     "src/**/*.vue",
-    "src/components/textEditor/index.ts"
+    "src/components/index.ts"
 , "src/components/textEditor/customEmbed.js"  ]
 }

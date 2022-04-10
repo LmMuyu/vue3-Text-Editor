@@ -2,10 +2,14 @@ import { defineConfig, LibraryFormats } from "vite";
 import vue from "@vitejs/plugin-vue";
 import path from "path";
 import dts from "vite-plugin-dts";
+// import vitedts from "vite-dts";
 import AutoImport from "unplugin-auto-import/vite";
 import Components from "unplugin-vue-components/vite";
 import { ElementPlusResolver } from "unplugin-vue-components/resolvers";
 import { viteStaticCopy } from "vite-plugin-static-copy";
+import dynamicImportVars from "@rollup/plugin-dynamic-import-vars";
+import gzip from "vite-plugin-compression";
+import { terser } from "rollup-plugin-terser";
 
 const formats: LibraryFormats[] = ["es"];
 
@@ -17,6 +21,12 @@ export default defineConfig({
     }),
     dts({
       outputDir: "dist/dts",
+    }),
+    gzip({}),
+    terser({
+      format: {
+        webkit: true,
+      },
     }),
     AutoImport({
       resolvers: [ElementPlusResolver()],
@@ -47,7 +57,7 @@ export default defineConfig({
     outDir: "dist",
     emptyOutDir: false,
     lib: {
-      entry: path.join(__dirname, "..", "/src/components/textEditor/index.ts"),
+      entry: path.join(__dirname, "..", "/src/components/index.ts"),
       name: "vueComps",
       fileName(format) {
         return "[ext]/[name]-[format].js";
@@ -64,12 +74,12 @@ export default defineConfig({
       },
     },
     rollupOptions: {
-      external: ["vue"],
+      external: ["vue", "vue-demi"],
       output: {
         chunkFileNames: "js/[name]-[hash]-[format].js",
         assetFileNames(chunkInfo) {
           if (chunkInfo.name.endsWith(".css")) {
-            return "[ext]/index.css"
+            return "[ext]/index.css";
           } else {
             return "[ext]/[name]-[hash].[ext]";
           }
@@ -84,6 +94,11 @@ export default defineConfig({
           }
         },
       },
+      plugins: [
+        dynamicImportVars({
+          exclude: ["node_modules", "dist", "build"],
+        }),
+      ],
     },
   },
 });

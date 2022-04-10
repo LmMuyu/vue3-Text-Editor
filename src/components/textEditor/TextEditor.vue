@@ -1,8 +1,5 @@
 <template>
-  <div ref="editor" class="editor_bg container">
-    就看到咯dawdawdawd d awdawdawdalwpdpawdlajdawiodjajwdpoJDPWDjaOw[jdWd
-    wdawpdjOwdjaowdjWDjOWDJIWD我开大伟大伟大
-  </div>
+  <div ref="editor" class="editor_bg container"></div>
   <div class="flex align-item justify-between">
     <div class="flex align-item py-4">
       <el-button class="mx-2" @click="onDialogVisible" circle>
@@ -134,11 +131,11 @@ async function insertLinke() {
   const p = new Promise((resolve, reject) => p_status.push(resolve, reject));
 
   try {
-    const uid = await Promise.race([p]);
+    const userinfo = (await Promise.race([p])) as any;
 
-    if (uid) {
-      aiTeUser(uid as number, insertPos!, "阿凯打开");
-      ctxEmit("sendAiteUid", uid);
+    if (userinfo) {
+      aiTeUser(userinfo.uid as number, insertPos!, userinfo.name);
+      ctxEmit("sendAiteUid", userinfo.uid);
     }
   } catch (error) {
     console.log(error);
