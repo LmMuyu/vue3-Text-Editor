@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc --noEmit && vite build -w",
-    "build:lib": "vite build -c ./build/lib.config.ts && yarn build:worker",
+    "build:lib": "vite build -c ./build/lib.config.ts",
     "build:worker": "vite build -c ./build/worker-lib.config.ts",
     "run:plugin": "vue-tsc  ./build/plugin/vite-plugin-dts-file.ts",
     "serve": "vite preview"

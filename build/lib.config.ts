@@ -6,6 +6,7 @@ import AutoImport from "unplugin-auto-import/vite";
 import Components from "unplugin-vue-components/vite";
 import { ElementPlusResolver } from "unplugin-vue-components/resolvers";
 import { viteStaticCopy } from "vite-plugin-static-copy";
+import cleanup from "rollup-plugin-cleanup";
 
 const formats: LibraryFormats[] = ["es"];
 
@@ -36,6 +37,7 @@ export default defineConfig({
         },
       ],
     }),
+    cleanup(),
   ],
   mode: "production",
   resolve: {
