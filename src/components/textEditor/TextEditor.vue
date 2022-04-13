@@ -69,6 +69,9 @@ const props = defineProps({
     type: Array as unknown as PropType<AiteUser>,
     required: true,
   },
+  emojis: {
+    type: Array,
+  },
 });
 
 const editor = ref(null);

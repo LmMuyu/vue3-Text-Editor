@@ -1,16 +1,8 @@
 import path from "path";
+import { terser } from "rollup-plugin-terser";
 import { defineConfig } from "vite";
-import movedtsfile from "./plugin/vite-plugin-dts-file";
 
 export default defineConfig({
-  plugins: [
-    {
-      name: "vite-buildend",
-      closeBundle() {
-        movedtsfile(path.join(__dirname, "../", "/dist/dts"), path.join(__dirname, "../", "/dist"));
-      },
-    },
-  ],
   build: {
     outDir: "dist/src/worker",
     lib: {
@@ -19,5 +11,12 @@ export default defineConfig({
       formats: ["cjs"],
     },
   },
+  plugins: [
+    terser({
+      format: {
+        webkit: true,
+      },
+    }),
+  ],
   mode: "production",
 });

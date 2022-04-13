@@ -69,15 +69,12 @@ export default defineConfig({
         chunkFileNames: "js/[name]-[hash]-[format].js",
         assetFileNames(chunkInfo) {
           if (chunkInfo.name.endsWith(".css")) {
-            return "[ext]/index.css"
+            return "[ext]/index.css";
           } else {
             return "[ext]/[name]-[hash].[ext]";
           }
         },
         entryFileNames: "[name].js",
-        // {
-        //   quill: ["quill"],
-        // }
         manualChunks(id) {
           if (id.includes("node_modules")) {
             return id.toString().split("node_modules/")[1].split("/")[0].toString();
