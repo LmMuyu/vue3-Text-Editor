@@ -1,14 +1,10 @@
 <template>
-  <div ref="editor" class="editor_bg container">
-    就看到咯dawdawdawd d awdawdawdalwpdpawdlajdawiodjajwdpoJDPWDjaOw[jdWd
-    wdawpdjOwdjaowdjWDjOWDJIWD我开大伟大伟大
-  </div>
+  <div ref="editor" class="editor_bg container"></div>
   <div class="flex align-item justify-between">
     <div class="flex align-item py-4">
       <el-button class="mx-2" @click="onDialogVisible" circle>
         <font-icon icon="iconaite"></font-icon>
       </el-button>
-      <button class="mx-2" @click="openEmoji">选择表情</button>
       <el-upload
         class="upload-demo mx-2"
         :show-file-list="false"
@@ -22,17 +18,21 @@
           </el-button>
         </template>
       </el-upload>
+      <el-button circle class="mx-2" @click="openEmoji">
+        <span>{{ collection[page]?.emojis?.[0] }} </span>
+      </el-button>
     </div>
 
     <div>
-      <el-button @click="release" plain>Plain</el-button>
+      <span style="font-size: 12px" class="mx-2"> {{ totalTextLen + "/" + 100 }}</span>
+      <el-button @click="release" plain>发布</el-button>
     </div>
   </div>
 
   <el-dialog
     ref="dialogbox"
     v-model="dialogVisible"
-    title="关注"
+    title="关注用户"
     width="30%"
     :before-close="handleClose"
   >
@@ -44,16 +44,29 @@
       </div>
     </div>
   </el-dialog>
+  <el-dialog v-model="emojiVisible" title="表情" :before-close="handleClose">
+    <section class="w-full h-full">
+      <main class="grid" @click="clickEmoji">
+        <span v-for="(emoji, index) in collection[page].emojis" :key="index">
+          {{ emoji }}
+        </span>
+      </main>
+      <footer>
+        <el-pagination :page-size="10" layout="prev, pager, next" :total="total" />
+      </footer>
+    </section>
+  </el-dialog>
 </template>
 <script setup lang="ts">
-import Quill from "quill";
+import Quill, { DeltaOperation } from "quill";
 import { nextTick, onMounted, PropType, ref } from "vue";
 
 import { BScroll } from "./methods";
 
-import { ElDialog, ElButton, ElUpload } from "element-plus";
+import { ElDialog, ElButton, ElUpload, ElPagination } from "element-plus";
 import FontIcon from "../fonticon/FontIcon.vue";
 
+import "element-plus/es/components/pagination/style/css";
 import "element-plus/es/components/dialog/style/css";
 import "element-plus/es/components/button/style/css";
 import "element-plus/es/components/upload/style/css";
@@ -74,19 +87,27 @@ const props = defineProps({
   },
 });
 
+let quill: Quill | null = null;
 const editor = ref(null);
 const dialogVisible = ref(false);
 const dialogbox = ref<typeof ElDialog | null>(null);
 const p_status: Array<(value: any) => void> = [];
-let quill: Quill | null = null;
 const aiteUserSet = new Set<string>();
 const wrapper = ref(null);
+const emojiVisible = ref(false);
+const collection = ref<{ emojis: string[]; page: number }[]>([]);
+const page = ref(0);
+const total = ref(1);
+const totalTextLen = ref(0);
 
 function release() {
   const content = editorContent();
+  const contentstr = transform(content?.ops as unknown as DeltaOperation[]);
 
-  if (content) {
-    ctxEmit("editor_content", content);
+  if (contentstr.trim() !== "") {
+    console.log("content");
+    ctxEmit("editor_content", contentstr);
+    deleteText(0, getLength()!);
   }
 }
 
@@ -95,6 +116,16 @@ function selectAite(userinfo: AiteUser) {
 
   const _resolve = p_status[0];
   _resolve(userinfo);
+}
+
+function clickEmoji(ev: Event) {
+  const node = ev.target as HTMLSpanElement;
+  if (node.nodeName === "SPAN") {
+    emojiVisible.value = false;
+
+    const _resolve = p_status[0];
+    _resolve(node.innerHTML);
+  }
 }
 
 async function onDialogVisible() {
@@ -109,7 +140,6 @@ async function onDialogVisible() {
 function registered() {
   if (wrapper.value) {
     console.log(wrapper.value);
-
     const BS = BScroll(wrapper.value);
   } else {
     console.error("无法获取dom");
@@ -132,16 +162,14 @@ async function insertLinke() {
     insertPos = pos[0];
   }
 
-  console.log(insertPos);
-
-  const p = new Promise((resolve, reject) => p_status.push(resolve, reject));
+  const p = setDelayPromise();
 
   try {
-    const uid = await Promise.race([p]);
+    const aiteUserInfo = (await Promise.race([p])) as AiteUser;
 
-    if (uid) {
-      aiTeUser(uid as number, insertPos!, "阿凯打开");
-      ctxEmit("sendAiteUid", uid);
+    if (aiteUserInfo) {
+      aiTeUser(aiteUserInfo.uid as number, insertPos!, aiteUserInfo.name);
+      ctxEmit("sendAiteUid", aiteUserInfo.uid);
     }
   } catch (error) {
     console.log(error);
@@ -179,30 +207,24 @@ function isLenSwitch(index: number, len: number, imgsrc: string) {
 
 async function openEmoji() {
   const range = getSelection();
+  emojiVisible.value = true;
+
+  const P = setDelayPromise();
+  const emoji = (await Promise.race([P])) as string;
+
   try {
     if (range) {
       const index = range[0];
-      const len = range[1];
-      const src = await selectEmoji();
-
-      isLenSwitch(index, len, src);
+      insertText(index, emoji);
     } else {
-      const start = quill?.getLength()!;
-      const src = await selectEmoji();
-
-      insertImage(start, src);
+      const index = getLength()!;
+      insertText(index, emoji);
     }
   } catch (err) {
     console.log(err);
+  } finally {
+    p_status.length = 0;
   }
-}
-
-function selectEmoji(): Promise<string> {
-  return new Promise((resolve, reject) => {
-    setTimeout(() => {
-      resolve("src");
-    }, 3000);
-  });
 }
 
 async function loadEmoji() {
@@ -214,18 +236,24 @@ async function loadEmoji() {
       keepalive: true,
     });
 
-    const worker = new Worker("/src/worker/fetchEmoji.js");
-    const collection: any[] = [];
+    const worker = new Worker(
+      new URL("../../assets/worker/fetchEmoji.worker.js", import.meta.url),
+      {
+        type: "module",
+      }
+    );
 
     worker.onmessage = function (e) {
       if (e.data === "close") {
         worker.terminate();
-        // console.log(collection);
+        total.value = collection.value[collection.value.length - 1].page;
         return;
       }
 
       const sliceEmojis = e.data;
-      collection.push(sliceEmojis);
+      // console.log(sliceEmojis);
+
+      collection.value.push(sliceEmojis);
     };
 
     worker.postMessage(await emojiJson.json());
@@ -243,9 +271,15 @@ function selectImage(evt: any) {
   appendImage(newfile);
 }
 
+//quill事件绑定
 function quillOn() {
   quill?.on("text-change", (delta, olddelta, source) => {
-    console.log(delta);
+    Promise.resolve().then(totalStrNum.bind(null, delta.ops));
+
+    if (totalTextLen.value + 1 > 100) {
+      deleteText(101, getLength()!);
+      return;
+    }
 
     if (source === "user") {
       const content = editorContent()!;
@@ -283,6 +317,19 @@ function quillOn() {
       }
     }
   });
+}
+
+function totalStrNum(delta: DeltaOperation[]) {
+  const insertText = delta.filter((v) => "insert" in v)[0]?.insert;
+  const deleteLen = delta.filter((v) => "delete" in v)[0]?.delete;
+
+  if (insertText && insertText !== "") {
+    console.log(insertText);
+
+    totalTextLen.value += delta.reduce((pre, next) => (pre += next.insert.length), 0) - 1;
+  } else if (deleteLen && deleteLen > 0) {
+    totalTextLen.value -= deleteLen;
+  }
 }
 
 onMounted(() => {
@@ -348,9 +395,45 @@ async function tooltipHidden() {
 function getLength() {
   return quill?.getLength();
 }
+
+function insertText(start: number, text: string) {
+  quill?.insertText(start, text);
+}
+
+function transform(deltas: DeltaOperation[]) {
+  return deltas
+    .map((delta) => {
+      if (delta && delta.attributes?.link) {
+        return `<a herf="${delta.attributes?.link}">${delta.insert}</a>`;
+      } else {
+        return delta.insert;
+      }
+    })
+    .join(" ");
+}
+
+const setDelayPromise = () => new Promise((resolve, reject) => p_status.push(resolve, reject));
 </script>
 
 <style scoped>
+.container {
+  max-height: 80px;
+  overflow-y: auto;
+}
+.w-full {
+  width: 100%;
+}
+
+.h-full {
+  height: 100%;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  grid-gap: 8px 8px;
+}
+
 .hidden {
   overflow: hidden;
 }
