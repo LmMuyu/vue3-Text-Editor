@@ -62,6 +62,7 @@ import Quill, { DeltaOperation } from "quill";
 import { nextTick, onMounted, PropType, ref } from "vue";
 
 import { BScroll } from "./methods";
+import Worker from "../../assets/worker/fetchEmoji.worker.js?worker";
 
 import { ElDialog, ElButton, ElUpload, ElPagination } from "element-plus";
 import FontIcon from "../fonticon/FontIcon.vue";
@@ -236,12 +237,7 @@ async function loadEmoji() {
       keepalive: true,
     });
 
-    const worker = new Worker(
-      new URL("../../assets/worker/fetchEmoji.worker.js", import.meta.url),
-      {
-        type: "module",
-      }
-    );
+    const worker = new Worker();
 
     worker.onmessage = function (e) {
       if (e.data === "close") {
@@ -274,17 +270,19 @@ function selectImage(evt: any) {
 //quill事件绑定
 function quillOn() {
   quill?.on("text-change", (delta, olddelta, source) => {
-    Promise.resolve().then(totalStrNum.bind(null, delta.ops));
+    totalStrNum(delta.ops);
+    formatRemove(delta.ops);
 
     if (totalTextLen.value + 1 > 100) {
-      deleteText(101, getLength()!);
+      totalTextLen.value = 100;
+      deleteText(100, getLength()!);
       return;
     }
 
-    if (source === "user") {
+    if (source === "user" && isInsertNull(delta.ops)) {
       const content = editorContent()!;
-      const ops = content.ops;
       const focuspos = getSelection()!;
+      const ops = content.ops;
       let currentIndex = 0;
       let aitesetLen = aiteUserSet.size;
 
@@ -319,16 +317,27 @@ function quillOn() {
   });
 }
 
-function totalStrNum(delta: DeltaOperation[]) {
-  const insertText = delta.filter((v) => "insert" in v)[0]?.insert;
-  const deleteLen = delta.filter((v) => "delete" in v)[0]?.delete;
+function totalStrNum(deltas: DeltaOperation[]) {
+  const total = totalTextLen;
 
-  if (insertText && insertText !== "") {
-    console.log(insertText);
+  deltas.forEach((delta) => {
+    for (const key in delta) {
+      if (key === "delete") {
+        total.value += -delta[key]!;
+      } else if (key === "insert") {
+        total.value += delta[key]!.length;
+      }
+    }
+  });
+}
 
-    totalTextLen.value += delta.reduce((pre, next) => (pre += next.insert.length), 0) - 1;
-  } else if (deleteLen && deleteLen > 0) {
-    totalTextLen.value -= deleteLen;
+function formatRemove(ops: DeltaOperation[]) {
+  const insert = ops[0]?.insert ? ops[0].insert : ops[1]?.insert ? ops[1]?.insert : undefined;
+
+  if ((ops.length === 1 || ops.length === 2) && insert?.toString().length) {
+    Promise.resolve().then(() => {
+      quill?.removeFormat(0, getLength()! - 1);
+    });
   }
 }
 
@@ -410,6 +419,14 @@ function transform(deltas: DeltaOperation[]) {
       }
     })
     .join(" ");
+}
+
+function isInsertNull(delta: DeltaOperation[]) {
+  for (let i = 0; i < delta.length; i++) {
+    if ("insert" in delta[i]) {
+      return delta[i].insert !== "";
+    }
+  }
 }
 
 const setDelayPromise = () => new Promise((resolve, reject) => p_status.push(resolve, reject));
