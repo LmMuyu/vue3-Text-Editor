@@ -12,6 +12,8 @@ const formats: LibraryFormats[] = ["es"];
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  publicDir: false,
+  base: "/dist/",
   plugins: [
     vue({
       include: [/\.vue$/, /\.md$/],
