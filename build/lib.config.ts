@@ -7,6 +7,8 @@ import Components from "unplugin-vue-components/vite";
 import { ElementPlusResolver } from "unplugin-vue-components/resolvers";
 import { viteStaticCopy } from "vite-plugin-static-copy";
 import { terser } from "rollup-plugin-terser";
+import typescript from "rollup-plugin-typescript2";
+import ts from "typescript";
 
 const formats: LibraryFormats[] = ["es"];
 
@@ -19,13 +21,26 @@ export default defineConfig({
       include: [/\.vue$/, /\.md$/],
     }),
     dts({
-      outputDir: "dist/dts",
+      outputDir: "dist",
+      tsConfigFilePath: path.join(process.cwd(), "/tsconfig.json"),
     }),
     AutoImport({
       resolvers: [ElementPlusResolver()],
     }),
     Components({
       resolvers: [ElementPlusResolver()],
+    }),
+    // typescript({
+    //   clean: true,
+    //   cwd: path.join(process.cwd(), "./dist"),
+    //   typescript: ts,
+    //   tsconfig: path.join(process.cwd(), "./tsconfig.json"),
+    //   verbosity: 3,
+    // }),
+    terser({
+      format: {
+        webkit: true,
+      },
     }),
     viteStaticCopy({
       targets: [
@@ -39,12 +54,6 @@ export default defineConfig({
         },
       ],
     }),
-
-    terser({
-      format: {
-        webkit: true,
-      },
-    }),
   ],
   mode: "production",
   resolve: {
@@ -56,7 +65,7 @@ export default defineConfig({
     outDir: "dist",
     emptyOutDir: false,
     lib: {
-      entry: path.join(__dirname, "..", "/src/components/textEditor/index.ts"),
+      entry: path.join(__dirname, "..", "/src/components/index.ts"),
       name: "vueComps",
       fileName(format) {
         return "[ext]/[name]-[format].js";
@@ -75,10 +84,10 @@ export default defineConfig({
     rollupOptions: {
       external: ["vue"],
       output: {
-        chunkFileNames: "js/[name]-[hash]-[format].js",
+        chunkFileNames: "js/[name]-[hash].js",
         assetFileNames(chunkInfo) {
-          if (chunkInfo.name.endsWith(".css")) {
-            return "[ext]/index.css";
+          if (chunkInfo.name && chunkInfo.name.endsWith(".css")) {
+            return "[ext]/[name]_index.css";
           } else {
             return "[ext]/[name]-[hash].[ext]";
           }
@@ -86,7 +95,8 @@ export default defineConfig({
         entryFileNames: "[name].js",
         manualChunks(id) {
           if (id.includes("node_modules")) {
-            return id.toString().split("node_modules/")[1].split("/")[0].toString();
+            const chunk = id.toString().split("node_modules/")[1].split("/")[0].toString();
+            return chunk;
           }
         },
       },

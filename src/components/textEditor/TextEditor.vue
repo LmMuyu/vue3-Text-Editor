@@ -1,7 +1,7 @@
 <template>
-  <div ref="editor" class="editor_bg container"></div>
-  <div class="flex align-item justify-between">
-    <div class="flex align-item py-4">
+  <div ref="editor" @keydown="keyCode" class="editor_bg container"></div>
+  <div class="flex itmes-center justify-between">
+    <div class="flex itmes-center py-4">
       <el-button class="mx-2" @click="onDialogVisible" circle>
         <font-icon icon="iconaite"></font-icon>
       </el-button>
@@ -19,7 +19,9 @@
         </template>
       </el-upload>
       <el-button circle class="mx-2" @click="openEmoji">
-        <span>{{ collection[page]?.emojis?.[0] }} </span>
+        <span class="flex items-center justify-center" style="width: 16px; height: 16px"
+          >{{ collection[page]?.emojis?.[0] }}
+        </span>
       </el-button>
     </div>
 
@@ -37,9 +39,15 @@
     :before-close="handleClose"
   >
     <div ref="wrapper" class="hidden" style="height: 250px">
-      <div class="continer">
-        <div v-for="(userinfo, index) in AiteUserData" :key="index" @click="selectAite(userinfo)">
-          <slot name="dialog" :data="userinfo"></slot>
+      <div :class="{ height: 32 * AiteUserData.length }">
+        <div
+          class="py-2 flex itmes-center"
+          v-for="(userinfo, index) in AiteUserData"
+          :key="index"
+          @click="selectAite(userinfo)"
+        >
+          <el-avatar :size="32" />
+          <span class="ml-2 flex itmes-center"> {{ userinfo.name }} </span>
         </div>
       </div>
     </div>
@@ -52,7 +60,11 @@
         </span>
       </main>
       <footer>
-        <el-pagination :page-size="10" layout="prev, pager, next" :total="total" />
+        <el-pagination
+          @current-change="pagination.curChange"
+          layout="prev, pager, next"
+          :total="total"
+        />
       </footer>
     </section>
   </el-dialog>
@@ -64,27 +76,32 @@ import { nextTick, onMounted, PropType, ref } from "vue";
 import { BScroll } from "./methods";
 import Worker from "../../assets/worker/fetchEmoji.worker.js?worker";
 
-import { ElDialog, ElButton, ElUpload, ElPagination } from "element-plus";
+import { ElDialog, ElButton, ElUpload, ElPagination, ElAvatar } from "element-plus";
 import FontIcon from "../fonticon/FontIcon.vue";
 
 import "element-plus/es/components/pagination/style/css";
 import "element-plus/es/components/dialog/style/css";
 import "element-plus/es/components/button/style/css";
 import "element-plus/es/components/upload/style/css";
+import "element-plus/es/components/avatar/style/css";
 
 import "../../assets/bubble.css";
 
 type AiteUser = { uid: number; name: string } & Readonly<Record<any, any>>;
 
-const ctxEmit = defineEmits(["editor_content", "sendAiteUid", "aiteuser_exist"]);
+const ctxEmit = defineEmits(["editor_content", "sendAiteUid", "aiteuser_exist", "upLoadImage"]);
 
 const props = defineProps({
   AiteUserData: {
-    type: Array as unknown as PropType<AiteUser>,
+    type: Array as unknown as PropType<AiteUser[]>,
     required: true,
   },
   emojis: {
     type: Array,
+  },
+  appendToContainer: {
+    type: Boolean,
+    default: true,
   },
 });
 
@@ -100,13 +117,21 @@ const collection = ref<{ emojis: string[]; page: number }[]>([]);
 const page = ref(0);
 const total = ref(1);
 const totalTextLen = ref(0);
+const aiteIdSet = new Set();
+
+class Pagination {
+  curChange(index: number) {
+    page.value = index - 1;
+  }
+}
+
+const pagination = new Pagination();
 
 function release() {
   const content = editorContent();
   const contentstr = transform(content?.ops as unknown as DeltaOperation[]);
 
   if (contentstr.trim() !== "") {
-    console.log("content");
     ctxEmit("editor_content", contentstr);
     deleteText(0, getLength()!);
   }
@@ -117,6 +142,9 @@ function selectAite(userinfo: AiteUser) {
 
   const _resolve = p_status[0];
   _resolve(userinfo);
+
+  p_status.length = 0;
+  setDelayPromise();
 }
 
 function clickEmoji(ev: Event) {
@@ -126,6 +154,8 @@ function clickEmoji(ev: Event) {
 
     const _resolve = p_status[0];
     _resolve(node.innerHTML);
+    p_status.length = 0;
+    setDelayPromise();
   }
 }
 
@@ -139,9 +169,11 @@ async function onDialogVisible() {
 }
 
 function registered() {
-  if (wrapper.value) {
-    console.log(wrapper.value);
+  if (wrapper.value && !(wrapper.value as HTMLElement).hasAttribute("BScroll")) {
     const BS = BScroll(wrapper.value);
+    (wrapper.value as HTMLElement).setAttribute("BScroll", "true");
+  } else if (wrapper.value && (wrapper.value as HTMLElement).hasAttribute("BScroll")) {
+    console.log("Bs挂载完成");
   } else {
     console.error("无法获取dom");
   }
@@ -170,7 +202,8 @@ async function insertLinke() {
 
     if (aiteUserInfo) {
       aiTeUser(aiteUserInfo.uid as number, insertPos!, aiteUserInfo.name);
-      ctxEmit("sendAiteUid", aiteUserInfo.uid);
+      !aiteIdSet.has(aiteUserInfo.uid) && ctxEmit("sendAiteUid", aiteUserInfo.uid);
+      aiteIdSet.add(aiteUserInfo.uid);
     }
   } catch (error) {
     console.log(error);
@@ -184,16 +217,18 @@ function handleClose(done: () => void) {
   done();
 }
 
-function appendImage(uploadImaag: string) {
+function appendImage(upLoadImage: string) {
   const range = getSelection();
 
-  if (range) {
+  if (range && props.appendToContainer) {
     const index = range[0];
     const len = range[1];
-    isLenSwitch(index, len, uploadImaag);
-  } else {
+    isLenSwitch(index, len, upLoadImage);
+  } else if (props.appendToContainer) {
     const start = quill?.getLength()!;
-    insertImage(start, uploadImaag);
+    insertImage(start, upLoadImage);
+  } else {
+    ctxEmit("upLoadImage", upLoadImage);
   }
 }
 
@@ -262,7 +297,6 @@ loadEmoji();
 
 function selectImage(evt: any) {
   const file = evt.raw as File;
-
   const newfile = URL.createObjectURL(file.slice(0));
   appendImage(newfile);
 }
@@ -273,8 +307,8 @@ function quillOn() {
     totalStrNum(delta.ops);
     formatRemove(delta.ops);
 
-    if (totalTextLen.value + 1 > 100) {
-      totalTextLen.value = 100;
+    if (totalTextLen.value > 100) {
+      totalTextLen.value = 101;
       deleteText(100, getLength()!);
       return;
     }
@@ -325,6 +359,10 @@ function totalStrNum(deltas: DeltaOperation[]) {
       if (key === "delete") {
         total.value += -delta[key]!;
       } else if (key === "insert") {
+        if (Object.prototype.toString.call(delta[key as "insert"]) === "[object Object]") {
+          return;
+        }
+
         total.value += delta[key]!.length;
       }
     }
@@ -338,6 +376,14 @@ function formatRemove(ops: DeltaOperation[]) {
     Promise.resolve().then(() => {
       quill?.removeFormat(0, getLength()! - 1);
     });
+  }
+}
+
+function keyCode(e: KeyboardEvent) {
+  const key = e.key;
+
+  if (key === "@") {
+    onDialogVisible();
   }
 }
 
@@ -406,6 +452,8 @@ function getLength() {
 }
 
 function insertText(start: number, text: string) {
+  console.log(start);
+
   quill?.insertText(start, text);
 }
 
@@ -465,12 +513,20 @@ const setDelayPromise = () => new Promise((resolve, reject) => p_status.push(res
   padding: 16px 0;
 }
 
+.py-2 {
+  padding: 4px 0;
+}
+
 .p-4 {
   padding: 16px;
 }
 
 .mx-2 {
   margin: 0 4px;
+}
+
+.ml-2 {
+  margin-left: 4px;
 }
 
 .flex {
@@ -485,7 +541,7 @@ const setDelayPromise = () => new Promise((resolve, reject) => p_status.push(res
   justify-content: space-between;
 }
 
-.align-item {
+.itmes-center {
   align-items: center;
 }
 .infinite-list {

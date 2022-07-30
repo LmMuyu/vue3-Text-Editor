@@ -9,13 +9,17 @@
     "resolveJsonModule": true,
     "esModuleInterop": true,
     "lib": ["esnext", "dom"],
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "allowJs": true,
+    "noImplicitAny": false
   },
   "include": [
     "src/**/*.ts",
     "src/**/*.d.ts",
     "src/**/*.tsx",
     "src/**/*.vue",
-    "src/components/textEditor/index.ts"
-, "src/components/textEditor/customEmbed.js"  ]
+    "src/components/textEditor/TextEditor.vue"
+  ]
 }
