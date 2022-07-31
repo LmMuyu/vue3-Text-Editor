@@ -4,9 +4,7 @@
 </template>
 <script setup lang="ts">
 import { ref } from "vue";
-import TextEditor from "./components/textEditor/TextEditor.vue";
-// import TexteEditor from "../dist/index.js";
-// import "../dist/css/style_index.css";
+// import TextEditor from "./components/textEditor/TextEditor.vue";
 
 type AiteUser = { uid: number; name: string } & Readonly<Record<any, any>>;
 

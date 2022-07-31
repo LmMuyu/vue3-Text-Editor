@@ -463,8 +463,6 @@ function getLength() {
 }
 
 function insertText(start: number, text: string) {
-  console.log(start);
-
   quill?.insertText(start, text);
 }
 

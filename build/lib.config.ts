@@ -9,8 +9,13 @@ import { viteStaticCopy } from "vite-plugin-static-copy";
 import { terser } from "rollup-plugin-terser";
 import typescript from "rollup-plugin-typescript2";
 import ts from "typescript";
+import legacy from "@vitejs/plugin-legacy";
 
 const formats: LibraryFormats[] = ["es"];
+
+const tsconfig = path.join(process.cwd(), "./tsconfig.json")
+console.log(tsconfig);
+
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -22,7 +27,7 @@ export default defineConfig({
     }),
     dts({
       outputDir: "dist",
-      tsConfigFilePath: path.join(process.cwd(), "/tsconfig.json"),
+      tsConfigFilePath: tsconfig,
     }),
     AutoImport({
       resolvers: [ElementPlusResolver()],
@@ -87,8 +92,6 @@ export default defineConfig({
       output: {
         chunkFileNames: "js/[name]-[hash].js",
         assetFileNames(chunkInfo) {
-          console.log(chunkInfo);
-
           if (chunkInfo.name && chunkInfo.name.endsWith(".css")) {
             return "[ext]/index.css";
           } else {

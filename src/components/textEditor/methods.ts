@@ -12,26 +12,6 @@ export function BScroll(continer: string | HTMLElement) {
   });
 }
 
-class Container {
-  static of(left: any, right: any) {
-    return new Either(left, right);
-  }
-}
-
-export class Either<T, K> extends Container {
-  left: K;
-  right: T;
-  constructor(left: K, right: T) {
-    super();
-    this.left = left;
-    this.right = right;
-  }
-
-  map(f: Function) {
-    return this.right ? Either.of(this.left, f(this.right)) : Either.of(f(this.left), this.right);
-  }
-}
-
 class otherKeyboardEvent {
   protected enterEventFn: Function | undefined;
 
