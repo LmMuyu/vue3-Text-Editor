@@ -4,7 +4,7 @@
 </template>
 <script setup lang="ts">
 import { ref } from "vue";
-// import TexteEditor from "./components/textEditor/TextEditor.vue";
+import TextEditor from "./components/textEditor/TextEditor.vue";
 // import TexteEditor from "../dist/index.js";
 // import "../dist/css/style_index.css";
 

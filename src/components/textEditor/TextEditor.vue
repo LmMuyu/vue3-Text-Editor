@@ -2,7 +2,7 @@
   <div ref="editor" @keydown="keyCode" class="editor_bg container"></div>
   <div class="flex itmes-center justify-between">
     <div class="flex itmes-center py-4">
-      <el-button class="mx-2" @click="onDialogVisible" circle>
+      <el-button :disabled="dialogVisible" class="mx-2" @click="onDialogVisible" circle>
         <font-icon icon="iconaite"></font-icon>
       </el-button>
       <el-upload
@@ -36,7 +36,13 @@
     v-model="dialogVisible"
     title="关注用户"
     width="30%"
-    :before-close="handleClose"
+    :before-close="
+      (done) => {
+        handleClose(done);
+        hover.unKeyEvent();
+      }
+    "
+    @open="() => hover.onKeyEvent()"
   >
     <div ref="wrapper" class="hidden" style="height: 250px">
       <div :class="{ height: 32 * AiteUserData.length }">
@@ -45,6 +51,8 @@
           v-for="(userinfo, index) in AiteUserData"
           :key="index"
           @click="selectAite(userinfo)"
+          :style="{ backgroundColor: unref(hover.hoverIndex) === index ? hover.rgbcolor : '' }"
+          @mouseenter="hover.hover(index)"
         >
           <el-avatar :size="32" />
           <span class="ml-2 flex itmes-center"> {{ userinfo.name }} </span>
@@ -71,9 +79,9 @@
 </template>
 <script setup lang="ts">
 import Quill, { DeltaOperation } from "quill";
-import { nextTick, onMounted, PropType, ref } from "vue";
+import { nextTick, onMounted, PropType, ref, unref } from "vue";
 
-import { BScroll } from "./methods";
+import { BScroll, hoverBackground } from "./methods";
 import Worker from "../../assets/worker/fetchEmoji.worker.js?worker";
 
 import { ElDialog, ElButton, ElUpload, ElPagination, ElAvatar } from "element-plus";
@@ -105,19 +113,21 @@ const props = defineProps({
   },
 });
 
-let quill: Quill | null = null;
-const editor = ref(null);
-const dialogVisible = ref(false);
-const dialogbox = ref<typeof ElDialog | null>(null);
-const p_status: Array<(value: any) => void> = [];
-const aiteUserSet = new Set<string>();
-const wrapper = ref(null);
-const emojiVisible = ref(false);
-const collection = ref<{ emojis: string[]; page: number }[]>([]);
 const page = ref(0);
 const total = ref(1);
+const editor = ref(null);
+const wrapper = ref(null);
 const totalTextLen = ref(0);
 const aiteIdSet = new Set();
+let quill: Quill | null = null;
+const emojiVisible = ref(false);
+const dialogVisible = ref(false);
+const aiteUserSet = new Set<string>();
+const p_status: Array<(value: any) => void> = [];
+const dialogbox = ref<typeof ElDialog | null>(null);
+const hover = new hoverBackground(props.AiteUserData.length);
+const collection = ref<{ emojis: string[]; page: number }[]>([]);
+hover.pushEnterEvent((index: number) => selectAite(props.AiteUserData[index]));
 
 class Pagination {
   curChange(index: number) {
@@ -139,6 +149,7 @@ function release() {
 
 function selectAite(userinfo: AiteUser) {
   dialogVisible.value = false;
+  hover.unKeyEvent();
 
   const _resolve = p_status[0];
   _resolve(userinfo);
@@ -187,10 +198,10 @@ function modifyPadding() {
 
 async function insertLinke() {
   const pos = getSelection();
-  let insertPos = null;
+  let insertPos = 0;
 
   if (!pos) {
-    insertPos = getLength();
+    insertPos = getLength() ?? 0;
   } else {
     insertPos = pos[0];
   }

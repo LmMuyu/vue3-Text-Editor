@@ -45,12 +45,12 @@ export default defineConfig({
     viteStaticCopy({
       targets: [
         {
-          src: path.join(process.cwd(), "/package.json"),
-          dest: path.join(process.cwd(), "/dist"),
+          src: path.join(process.cwd(), "./package.json"),
+          dest: path.join(process.cwd(), "./dist"),
         },
         {
-          src: path.join(process.cwd(), "/README.md"),
-          dest: path.join(process.cwd(), "/dist"),
+          src: path.join(process.cwd(), "./README.md"),
+          dest: path.join(process.cwd(), "./dist"),
         },
       ],
     }),
@@ -65,7 +65,8 @@ export default defineConfig({
     outDir: "dist",
     emptyOutDir: false,
     lib: {
-      entry: path.join(__dirname, "..", "/src/components/index.ts"),
+      entry: path.join(process.cwd(), "./src", "./components/index.ts"),
+      // entry: path.join(process.cwd(), "./src", "./main.ts"),
       name: "vueComps",
       fileName(format) {
         return "[ext]/[name]-[format].js";
@@ -86,8 +87,10 @@ export default defineConfig({
       output: {
         chunkFileNames: "js/[name]-[hash].js",
         assetFileNames(chunkInfo) {
+          console.log(chunkInfo);
+
           if (chunkInfo.name && chunkInfo.name.endsWith(".css")) {
-            return "[ext]/[name]_index.css";
+            return "[ext]/index.css";
           } else {
             return "[ext]/[name]-[hash].[ext]";
           }
